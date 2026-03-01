@@ -296,18 +296,18 @@ document.getElementById("start").classList.add("hidden");
 document.getElementById("dashboard").classList.remove("hidden");
 }
 
-function openMovements(){
+window.openMovements = function(){
  document.getElementById("dashboard").classList.add("hidden");
  document.getElementById("movements").classList.remove("hidden");
  renderMovements();
 }
 
-function backToDashboard(){
+window.backToDashboard = function(){
  document.getElementById("movements").classList.add("hidden");
  document.getElementById("dashboard").classList.remove("hidden");
 }
 
-function openGame(){
+window.openGame = function(){
 document.getElementById("dashboard").classList.add("hidden");
 document.getElementById("game").classList.remove("hidden");
 soundStart.play();
@@ -522,7 +522,6 @@ if(money >= 1200 && score >= 15){
     profile="💥 Perfil: Insolvente";
     interpretation="As decisões tomadas conduziram a consequências financeiras graves. Evidencia necessidade urgente de reforçar competências de segurança digital, controlo de crédito e prevenção de fraude.";
     recommendations="É prioritário desenvolver hábitos de segurança digital, aprender a distinguir comunicações fraudulentas e compreender o funcionamento dos juros e do crédito.";
-}
 }
 
 let consequences=`
@@ -770,6 +769,11 @@ logoutBtn.onclick=()=>signOut(auth);
 document.getElementById("teacherArea").appendChild(logoutBtn);
 
 document.getElementById("teacherPdfBtn").onclick = function(){
+    const group=document.getElementById("group").value;
+    const turma=document.getElementById("class").value;
+    const student1=document.getElementById("student1").value;
+    const student2=document.getElementById("student2").value;
+    const student3=document.getElementById("student3").value;
     const pdf = new jsPDF();
     pdf.setFontSize(16);
     pdf.text("Relatório Analítico do Professor", 20, 20);
@@ -900,6 +904,7 @@ emailjs.send("service_wi13tin","template_8hy77yw",{
  score:score,
  time:time
 });
+}
 
 </script>
 
