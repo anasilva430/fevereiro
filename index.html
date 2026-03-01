@@ -11,11 +11,17 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f2027;color:#fff}
-.app{max-width:420px;margin:auto;padding:10px}
-.card{background:#1c2833;padding:15px;border-radius:20px;margin-top:10px}
-button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;cursor:pointer}
+.app{max-width:500px;margin:auto;padding:15px}
+.card{background:#1c2833;padding:20px;border-radius:20px;margin-top:15px;box-shadow:0 10px 25px rgba(0,0,0,0.4)}
+button{padding:12px;border:none;border-radius:12px;margin:6px 0;width:100%;cursor:pointer;font-size:15px}
+button:hover{opacity:0.9}
 .hidden{display:none}
-.top{display:flex;justify-content:space-between;font-size:14px}
+.top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px}
+.feedback{margin-top:10px;font-weight:bold}
+.correct{background:#2ecc71}
+.wrong{background:#e74c3c}
+.progress{height:8px;background:#555;border-radius:10px;margin-top:10px}
+.bar{height:100%;background:#00ffc3;border-radius:10px;width:0%}
 </style>
 </head>
 <body>
@@ -23,10 +29,10 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 <div class="app">
 
 <div class="card" id="start">
-<h2>📱 Simulador PREMIUM</h2>
-<input id="group" placeholder="Grupo"><br><br>
+<h2>📱 Simulador Financeiro PREMIUM</h2>
+<input id="group" placeholder="Nome do Grupo"><br><br>
 <input id="class" placeholder="Turma"><br><br>
-<button id="startBtn">Iniciar</button>
+<button id="startBtn">Iniciar Missão</button>
 </div>
 
 <div class="card hidden" id="game">
@@ -35,8 +41,11 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 <span>💰 <span id="money">1000</span>€</span>
 <span>⏱ <span id="time">0</span>s</span>
 </div>
+
 <h3 id="story"></h3>
 <div id="choices"></div>
+<div id="feedback" class="feedback"></div>
+<div class="progress"><div id="bar" class="bar"></div></div>
 </div>
 
 <div class="card hidden" id="end">
@@ -49,7 +58,7 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 
 <script type="module">
 
-// 🔥 IMPORTS (TÊM DE ESTAR NO TOPO)
+// 🔥 FIREBASE IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -76,14 +85,16 @@ let timer;
 let stepIndex=0;
 
 const steps=[
-{q:"Recebes SMS com link do banco.",c:["Clicar","Ignorar"],a:1,good:50,bad:-150},
-{q:"Site com preço demasiado baixo.",c:["Comprar","Evitar"],a:1,good:60,bad:-100},
-{q:"Pedido MBWay desconhecido.",c:["Aceitar","Recusar"],a:1,good:80,bad:-200},
-{q:"Guardar dados do cartão no navegador.",c:["Sim","Não"],a:1,good:50,bad:-80},
-{q:"Usar Wi-Fi público para pagar.",c:["Sim","Não"],a:1,good:50,bad:-100}
+{q:"Recebes um SMS com link para 'confirmar dados bancários'.",c:["Clicar no link","Ignorar e apagar"],a:1,good:50,bad:-200,exp:"Era phishing. Nunca clicar em links suspeitos."},
+{q:"Site tem preço muito abaixo do mercado.",c:["Comprar","Verificar reputação"],a:1,good:40,bad:-100,exp:"Preços demasiado baixos podem indicar fraude."},
+{q:"Pedido MBWay de desconhecido.",c:["Aceitar","Recusar"],a:1,good:60,bad:-250,exp:"Nunca aceitar pedidos desconhecidos."},
+{q:"Guardar cartão no navegador partilhado.",c:["Sim","Não"],a:1,good:50,bad:-150,exp:"Evita guardar dados em dispositivos partilhados."},
+{q:"Ativar autenticação de dois fatores.",c:["Sim","Não"],a:0,good:70,bad:-80,exp:"2FA aumenta muito a segurança."},
+{q:"Verificas extrato bancário regularmente?",c:["Sim","Não"],a:0,good:40,bad:-100,exp:"Monitorizar movimentos ajuda a detetar fraude."}
 ];
 
 // 🔥 INICIAR JOGO
+
 document.getElementById("startBtn").addEventListener("click", startGame);
 
 function startGame(){
@@ -102,43 +113,51 @@ nextStep();
 function nextStep(){
 let s=steps[stepIndex];
 document.getElementById("story").innerText=s.q;
-
 let div=document.getElementById("choices");
 div.innerHTML="";
+document.getElementById("feedback").innerText="";
 
 s.c.forEach((opt,i)=>{
 let b=document.createElement("button");
 b.innerText=opt;
-b.onclick=()=>choose(i);
+b.onclick=()=>choose(i,b);
 div.appendChild(b);
 });
+
+let percent=(stepIndex/steps.length)*100;
+document.getElementById("bar").style.width=percent+"%";
 }
 
-function choose(i){
+function choose(i,btn){
 let s=steps[stepIndex];
 
 if(i===s.a){
 score++;
 money+=s.good;
+btn.classList.add("correct");
+document.getElementById("feedback").innerText="✔ Correto! " + s.exp;
 }else{
 money+=s.bad;
+btn.classList.add("wrong");
+document.getElementById("feedback").innerText="✖ Atenção! " + s.exp;
 }
 
+updateUI();
+
+setTimeout(()=>{
+stepIndex++;
+if(stepIndex<steps.length){nextStep();}
+else{endGame();}
+},1500);
+}
+
+function updateUI(){
 document.getElementById("score").innerText=score;
 document.getElementById("money").innerText=money;
-
-stepIndex++;
-
-if(stepIndex<steps.length){
-nextStep();
-}else{
-endGame();
-}
 }
 
 async function endGame(){
 clearInterval(timer);
-
 document.getElementById("game").classList.add("hidden");
 document.getElementById("end").classList.remove("hidden");
 
@@ -146,13 +165,11 @@ let time=Math.floor((new Date()-startTime)/1000);
 let group=document.getElementById("group").value;
 let turma=document.getElementById("class").value;
 
-document.getElementById("result").innerText=
-`${group} | ${turma} | ⭐${score} | 💰${money}€ | ⏱${time}s`;
+let result=`${group} | ${turma} | ⭐${score} | 💰${money}€ | ⏱${time}s`;
+document.getElementById("result").innerText=result;
 
-// 🔥 GUARDAR NO FIRESTORE
 await addDoc(collection(db,"ranking"),{group,turma,score,money,time});
 
-// 🔥 LER TOP 5
 const q=query(collection(db,"ranking"),orderBy("score","desc"),limit(5));
 const snapshot=await getDocs(q);
 
@@ -163,12 +180,11 @@ html+=`<p>${d.group} - ⭐${d.score} 💰${d.money}€</p>`;
 });
 document.getElementById("leader").innerHTML=html;
 
-// EMAIL
 emailjs.send("service_wi13tin","template_8hy77yw",{
-group:group,
-turma:turma,
-score:score,
-time:time
+ group:group,
+ turma:turma,
+ score:score,
+ time:time
 });
 }
 
