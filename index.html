@@ -8,20 +8,130 @@
 <title>Simulador Financeiro PREMIUM</title>
 
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#0f2027;color:#fff}
-.app{max-width:500px;margin:auto;padding:15px}
-.card{background:#1c2833;padding:20px;border-radius:20px;margin-top:15px;box-shadow:0 10px 25px rgba(0,0,0,0.4)}
-button{padding:12px;border:none;border-radius:12px;margin:6px 0;width:100%;cursor:pointer;font-size:15px}
-button:hover{opacity:0.9}
+body{
+  margin:0;
+  font-family:'Segoe UI', Roboto, sans-serif;
+  background:#f4f6f9;
+  color:#1c1c1c;
+}
+
+.app{
+  max-width:420px;
+  margin:auto;
+  min-height:100vh;
+  padding:20px 15px 40px 15px;
+}
+
+.card{
+  background:#ffffff;
+  padding:20px;
+  border-radius:20px;
+  margin-top:15px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.08);
+}
+
+h2{
+  margin-top:0;
+  font-weight:600;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #e0e0e0;
+  background:#fafafa;
+  font-size:14px;
+  box-sizing:border-box;
+}
+
+button{
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  margin:8px 0;
+  width:100%;
+  cursor:pointer;
+  font-size:15px;
+  font-weight:600;
+  background:#00a86b;
+  color:white;
+  transition:all 0.2s ease;
+}
+
+button:hover{
+  background:#008f5a;
+  transform:translateY(-2px);
+}
+
 .hidden{display:none}
-.top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px}
-.feedback{margin-top:10px;font-weight:bold}
-.correct{background:#2ecc71}
-.wrong{background:#e74c3c}
-.progress{height:8px;background:#555;border-radius:10px;margin-top:10px}
-.bar{height:100%;background:#00ffc3;border-radius:10px;width:0%}
+
+.top{
+  background:#00a86b;
+  color:white;
+  padding:18px;
+  border-radius:18px;
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  margin-bottom:15px;
+}
+
+#money{
+  font-size:18px;
+  font-weight:700;
+}
+
+.feedback{
+  margin-top:12px;
+  font-weight:600;
+}
+
+.correct{
+  background:#2e7d32 !important;
+}
+
+.wrong{
+  background:#c62828 !important;
+}
+
+.progress{
+  height:6px;
+  background:#e0e0e0;
+  border-radius:10px;
+  margin-top:15px;
+}
+
+.bar{
+  height:100%;
+  background:#00a86b;
+  border-radius:10px;
+  width:0%;
+}
+
+canvas{
+  background:white;
+  border-radius:16px;
+  padding:10px;
+  margin-top:15px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+.flash-red{
+  animation:flashRed 0.3s ease-in-out 6;
+}
+
+@keyframes flashRed{
+  0%{background:#f4f6f9}
+  50%{background:#8b0000}
+  100%{background:#f4f6f9}
+}
+
 </style>
 </head>
 <body>
@@ -32,7 +142,29 @@ button:hover{opacity:0.9}
 <h2>📱 Simulador Financeiro PREMIUM</h2>
 <input id="group" placeholder="Nome do Grupo"><br><br>
 <input id="class" placeholder="Turma"><br><br>
+<input id="student1" placeholder="Aluno 1 - Primeiro e Último Nome"><br><br>
+<input id="student2" placeholder="Aluno 2 - Primeiro e Último Nome"><br><br>
+<input id="student3" placeholder="Aluno 3 - Primeiro e Último Nome (opcional)"><br><br>
 <button id="startBtn">Iniciar Missão</button>
+</div>
+
+<div class="card hidden" id="dashboard">
+<div style="background:#00a86b;color:white;padding:20px;border-radius:18px;">
+<div style="font-size:13px;opacity:0.8;">Conta Digital Escolar</div>
+<div style="font-size:28px;font-weight:700;" id="dashboardMoney">1000€</div>
+<div style="font-size:12px;opacity:0.8;">Saldo disponível</div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:15px;">
+<button onclick="openGame()" style="width:48%;background:#00a86b;">▶ Iniciar Desafios</button>
+<button onclick="openMovements()" style="width:48%;background:#e0e0e0;color:#333;">📜 Movimentos</button>
+</div>
+</div>
+
+<div class="card hidden" id="movements">
+<h2>📜 Movimentos da Conta</h2>
+<canvas id="miniChart" height="80" style="margin-top:10px;"></canvas>
+<div id="movementList" style="margin-top:15px;"></div>
+<button onclick="backToDashboard()">⬅ Voltar</button>
 </div>
 
 <div class="card hidden" id="game">
@@ -49,9 +181,25 @@ button:hover{opacity:0.9}
 </div>
 
 <div class="card hidden" id="end">
+<button id="teacherAreaBtn">🔐 Área Reservada do Professor</button>
+<div id="teacherLogin" class="hidden" style="margin-top:10px;">
+<input type="email" id="teacherEmail" placeholder="Email do professor"><br><br>
+<input type="password" id="teacherPass" placeholder="Palavra‑passe"><br><br>
+<button id="registerTeacherBtn">Criar Conta</button>
+<button id="loginTeacherBtn">Entrar</button>
+<p id="loginMsg" style="color:#ffcc00;"></p>
+</div>
+<div id="teacherArea" class="hidden">
 <h2>🏆 Ranking Global</h2>
 <p id="result"></p>
+<canvas id="moneyChart" height="200"></canvas>
+<button id="downloadChartBtn">🖼️ Descarregar Imagem do Gráfico</button>
+<button id="pdfBtn">📄 Gerar Relatório PDF do Grupo</button>
+<button id="teacherPdfBtn">📊 Gerar Relatório do Professor</button>
+<button id="classReportBtn">🏫 Gerar Relatório Agregado da Turma</button>
+<button id="exportExcelBtn">📥 Exportar Todos os Resultados (Excel)</button>
 <div id="leader"></div>
+</div>
 </div>
 
 </div>
@@ -61,6 +209,7 @@ button:hover{opacity:0.9}
 // 🔥 FIREBASE IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // 🔥 FIREBASE CONFIG
 const firebaseConfig = {
@@ -74,23 +223,66 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// 🔐 PERFIS DE PROFESSOR (coleção: teachers)
+// Estrutura esperada no Firestore:
+// teachers (collection)
+//    uid (document id)
+//       role: "admin" | "professor" | "readOnly"
+//       turmas: ["10A","11B"]
+
 
 emailjs.init("d9d86G7bDE1WQ8eDy");
+
+let isTeacher=false; // controlado agora por Firebase Auth // pode alterar esta palavra‑passe("d9d86G7bDE1WQ8eDy");
+
+// 🔊 SONS
+const soundStart = new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3");
+const soundCorrect = new Audio("https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3");
+const soundWrong = new Audio("https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3");
+const soundEnd = new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3");
+const soundBankrupt = new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3");
 
 // 🎮 VARIÁVEIS
 let score=0;
 let money=1000;
+let totalGains=0;
+let balanceHistory=[1000];
+let totalLosses=0;
+let interestPaid=0;
+let interestHistory=[0];
+let movements=[]; // cada movimento terá: descricao, valor, tipo, saldo
 let startTime;
 let timer;
 let stepIndex=0;
+let loanUsed=false;
+let loanActive=false;
+let loanIndex=null; // índice onde o empréstimo foi ativado
+let bankruptcyIndex=null; // índice onde ocorreu falência definitiva
+const loanInterest=50; // juros por pergunta após empréstimo
 
 const steps=[
-{q:"Recebes um SMS com link para 'confirmar dados bancários'.",c:["Clicar no link","Ignorar e apagar"],a:1,good:50,bad:-200,exp:"Era phishing. Nunca clicar em links suspeitos."},
-{q:"Site tem preço muito abaixo do mercado.",c:["Comprar","Verificar reputação"],a:1,good:40,bad:-100,exp:"Preços demasiado baixos podem indicar fraude."},
-{q:"Pedido MBWay de desconhecido.",c:["Aceitar","Recusar"],a:1,good:60,bad:-250,exp:"Nunca aceitar pedidos desconhecidos."},
-{q:"Guardar cartão no navegador partilhado.",c:["Sim","Não"],a:1,good:50,bad:-150,exp:"Evita guardar dados em dispositivos partilhados."},
-{q:"Ativar autenticação de dois fatores.",c:["Sim","Não"],a:0,good:70,bad:-80,exp:"2FA aumenta muito a segurança."},
-{q:"Verificas extrato bancário regularmente?",c:["Sim","Não"],a:0,good:40,bad:-100,exp:"Monitorizar movimentos ajuda a detetar fraude."}
+{q:"Recebes SMS do banco a pedir dados.",c:["Ignorar","Responder"],a:0,good:50,bad:-200,exp:"Era phishing."},
+{q:"Site desconhecido para comprar.",c:["Avançar","Sair"],a:1,good:40,bad:-120,exp:"Risco de fraude."},
+{q:"Usas Wi-Fi público para pagar.",c:["Sim","Não"],a:1,good:30,bad:-150,exp:"Pode ser inseguro."},
+{q:"Email com link estranho.",c:["Abrir","Apagar"],a:1,good:40,bad:-180,exp:"Ataque phishing."},
+{q:"Ativar 2FA.",c:["Sim","Não"],a:0,good:70,bad:-100,exp:"Mais segurança."},
+{q:"Guardar passwords sem proteção.",c:["Sim","Não"],a:1,good:40,bad:-150,exp:"Risco elevado."},
+{q:"Verificar HTTPS.",c:["Sim","Não"],a:0,good:40,bad:-80,exp:"Essencial."},
+{q:"Atualizar apps bancárias.",c:["Sim","Não"],a:0,good:50,bad:-100,exp:"Corrige falhas."},
+{q:"Cartão virtual online.",c:["Sim","Não"],a:0,good:60,bad:-90,exp:"Mais seguro."},
+{q:"Chamada suspeita.",c:["Desligar","Continuar"],a:0,good:50,bad:-200,exp:"Fraude comum."},
+{q:"Mesma password sempre.",c:["Sim","Não"],a:1,good:40,bad:-150,exp:"Perigoso."},
+{q:"Ver extratos regularmente.",c:["Sim","Não"],a:0,good:60,bad:-120,exp:"Deteta fraude."},
+{q:"Partilhar dados online.",c:["Sim","Não"],a:1,good:40,bad:-180,exp:"Cuidado."},
+{q:"Instalar apps externas fora da store.",c:["Sim","Não"],a:1,good:40,bad:-200,exp:"Pode ser malware."},
+{q:"Link de prémio falso.",c:["Clicar","Ignorar"],a:1,good:50,bad:-150,exp:"Burla."},
+{q:"Pagas com cartão de crédito sem verificar limite.",c:["Sim","Não"],a:1,good:60,bad:-250,exp:"Pode gerar dívida."},
+{q:"Usas cartão débito online sem proteção extra.",c:["Sim","Não"],a:1,good:50,bad:-200,exp:"Risco direto na conta."},
+{q:"Ativas notificações bancárias.",c:["Sim","Não"],a:0,good:60,bad:-80,exp:"Ajuda no controlo."},
+{q:"Pagamentos contactless sem limite definido.",c:["Sim","Não"],a:1,good:50,bad:-150,exp:"Pode ser abusado."},
+{q:"Guardas dados do cartão em vários sites.",c:["Sim","Não"],a:1,good:50,bad:-200,exp:"Evitar guardar."}
 ];
 
 // 🔥 INICIAR JOGO
@@ -98,6 +290,27 @@ const steps=[
 document.getElementById("startBtn").addEventListener("click", startGame);
 
 function startGame(){
+soundStart.play();
+startTime=new Date();
+document.getElementById("start").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+}
+
+function openMovements(){
+ document.getElementById("dashboard").classList.add("hidden");
+ document.getElementById("movements").classList.remove("hidden");
+ renderMovements();
+}
+
+function backToDashboard(){
+ document.getElementById("movements").classList.add("hidden");
+ document.getElementById("dashboard").classList.remove("hidden");
+}
+
+function openGame(){
+document.getElementById("dashboard").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+soundStart.play();
 startTime=new Date();
 document.getElementById("start").classList.add("hidden");
 document.getElementById("game").classList.remove("hidden");
@@ -132,17 +345,93 @@ function choose(i,btn){
 let s=steps[stepIndex];
 
 if(i===s.a){
+movements.push({descricao:s.q,valor:s.good,tipo:"credito",saldo:money + s.good});
 score++;
 money+=s.good;
+totalGains+=s.good;
 btn.classList.add("correct");
 document.getElementById("feedback").innerText="✔ Correto! " + s.exp;
+soundCorrect.play();
 }else{
+movements.push({descricao:s.q,valor:s.bad,tipo:"debito",saldo:money + s.bad});
 money+=s.bad;
+totalLosses+=Math.abs(s.bad);
 btn.classList.add("wrong");
 document.getElementById("feedback").innerText="✖ Atenção! " + s.exp;
+soundWrong.play();
 }
 
 updateUI();
+balanceHistory.push(money);
+
+// 💸 JUROS DO EMPRÉSTIMO
+if(loanActive && money > -500){
+    money -= loanInterest;
+    interestPaid += loanInterest;
+    totalLosses += loanInterest;
+    document.getElementById("feedback").innerText += " 💸 Juros do empréstimo: -50€.";
+    updateUI();
+}
+
+if(loanActive && money > -500){
+ movements.push({descricao:"Juros do empréstimo",valor:-loanInterest,tipo:"debito",saldo:money - loanInterest});
+}
+
+interestHistory.push(interestPaid);
+
+// 🔴 SOM ESPECIAL SE SALDO NEGATIVO
+if(money < 0){
+    soundBankrupt.play();
+    document.getElementById("feedback").innerText += " ⚠️ Saldo negativo! Estás em risco financeiro.";
+}
+
+// 💥 FALÊNCIA AUTOMÁTICA COM HIPÓTESE DE EMPRÉSTIMO
+if(money < -500){
+
+    if(!loanUsed){
+        loanUsed = true;
+        soundBankrupt.play();
+        document.getElementById("feedback").innerText = "🏦 Estás em falência! Queres pedir um empréstimo de emergência de 800€ (com penalização de -2 pontos)?";
+        
+        const div=document.getElementById("choices");
+        div.innerHTML="";
+
+        const yesBtn=document.createElement("button");
+        yesBtn.innerText="Pedir empréstimo";
+        yesBtn.onclick=()=>{
+            money += 800;
+            score -= 2;
+            loanActive = true;
+            loanIndex = balanceHistory.length; // marcar momento do empréstimo
+            balanceHistory.push(money);
+            updateUI();
+            document.getElementById("feedback").innerText="Recebeste 800€, mas agora tens juros de 50€ por cada nova decisão.";
+            setTimeout(()=>{ nextStep(); },1500);
+        };
+
+        const noBtn=document.createElement("button");
+        noBtn.innerText="Não pedir empréstimo";
+        noBtn.onclick=()=>{
+            document.getElementById("feedback").innerText="💥 FALÊNCIA CONFIRMADA! Jogo terminado.";
+            bankruptcyIndex = balanceHistory.length-1; // marcar momento da falência no gráfico
+            document.body.classList.add("flash-red");
+            setTimeout(()=>{document.body.classList.remove("flash-red");},1800);
+            setTimeout(()=>{ endGame(); },1500);
+        };
+
+        div.appendChild(yesBtn);
+        div.appendChild(noBtn);
+        return;
+    } else {
+        document.getElementById("feedback").innerText = "💥 FALÊNCIA DEFINITIVA! Jogo terminado.";
+        bankruptcyIndex = balanceHistory.length-1; // marcar momento da falência no gráfico
+        document.body.classList.add("flash-red");
+        setTimeout(()=>{document.body.classList.remove("flash-red");},1800);
+        soundBankrupt.play();
+        setTimeout(()=>{ endGame(); },1500);
+        return;
+    }
+}
 
 setTimeout(()=>{
 stepIndex++;
@@ -151,12 +440,53 @@ else{endGame();}
 },1500);
 }
 
+function renderMovements(){
+ const miniCtx=document.getElementById("miniChart");
+ if(miniCtx){
+   new Chart(miniCtx,{
+     type:'line',
+     data:{
+       labels:balanceHistory.map((_,i)=>i),
+       datasets:[{
+         data:balanceHistory,
+         borderColor:'#00a86b',
+         backgroundColor:'rgba(0,168,107,0.1)',
+         tension:0.4,
+         fill:true,
+         pointRadius:0
+       }]
+     },
+     options:{
+       plugins:{legend:{display:false}},
+       scales:{x:{display:false},y:{display:false}},
+       elements:{line:{borderWidth:2}}
+     }
+   });
+ }
+
+
+ const list=document.getElementById("movementList");
+ list.innerHTML="";
+ movements.slice().reverse().forEach(m=>{
+   const div=document.createElement("div");
+   div.style.padding="10px";
+   div.style.borderBottom="1px solid #eee";
+   div.innerHTML=`<div style="font-size:13px;">${m.descricao}</div>
+   <div style="font-weight:600;color:${m.tipo==='credito'?'#2e7d32':'#c62828'};">
+   ${m.valor>0?'+':''}${m.valor}€</div>
+   <div style="font-size:12px;color:#666;">Saldo após movimento: ${m.saldo}€</div>`;
+   list.appendChild(div);
+ });
+}
+
 function updateUI(){
+document.getElementById("dashboardMoney").innerText=money+"€";
 document.getElementById("score").innerText=score;
 document.getElementById("money").innerText=money;
 }
 
 async function endGame(){
+soundEnd.play();
 clearInterval(timer);
 document.getElementById("game").classList.add("hidden");
 document.getElementById("end").classList.remove("hidden");
@@ -164,11 +494,84 @@ document.getElementById("end").classList.remove("hidden");
 let time=Math.floor((new Date()-startTime)/1000);
 let group=document.getElementById("group").value;
 let turma=document.getElementById("class").value;
+let student1=document.getElementById("student1").value;
+let student2=document.getElementById("student2").value;
+let student3=document.getElementById("student3").value;
 
-let result=`${group} | ${turma} | ⭐${score} | 💰${money}€ | ⏱${time}s`;
+let profile="";
+let interpretation="";
+let recommendations="";
+
+if(money >= 1200 && score >= 15){
+    profile="🏆 Perfil: Investidor Responsável";
+    interpretation="Demonstraram elevada capacidade de decisão financeira. Revelam pensamento crítico, prevenção de risco e controlo consistente do saldo. Mantiveram segurança digital e equilíbrio financeiro ao longo do jogo.";
+    recommendations="Continuem a reforçar boas práticas: utilizar autenticação forte, diversificar métodos de pagamento seguros e acompanhar regularmente movimentos bancários.";
+}else if(money >= 800 && score >= 12){
+    profile="📈 Perfil: Financeiramente Consciente";
+    interpretation="Tomaram maioritariamente decisões seguras e revelaram boa literacia financeira. Existem ainda alguns riscos assumidos, mas demonstram consciência digital e controlo razoável do orçamento.";
+    recommendations="Devem consolidar hábitos como verificar sempre a autenticidade dos sites, ativar notificações bancárias e evitar guardar dados de cartão em plataformas online.";
+}else if(money >= 0){
+    profile="⚖️ Perfil: Moderado / Precisa melhorar decisões";
+    interpretation="Apresentam comportamentos mistos. Algumas decisões foram prudentes, mas outras colocaram o saldo em risco. Devem reforçar atenção à segurança online e gestão de crédito.";
+    recommendations="É recomendável aprofundar conhecimentos sobre phishing, fraude digital e gestão responsável do cartão de crédito.";
+}else if(money < 0 && money > -500){
+    profile="⚠️ Perfil: Arriscado";
+    interpretation="Assumiram riscos significativos e demonstraram vulnerabilidade a fraudes ou má gestão financeira. É fundamental melhorar a análise crítica antes de realizar pagamentos digitais.";
+    recommendations="Devem trabalhar competências de prevenção de fraude, evitar decisões impulsivas e compreender melhor o impacto dos juros e do crédito.";
+}else{
+    profile="💥 Perfil: Insolvente";
+    interpretation="As decisões tomadas conduziram a consequências financeiras graves. Evidencia necessidade urgente de reforçar competências de segurança digital, controlo de crédito e prevenção de fraude.";
+    recommendations="É prioritário desenvolver hábitos de segurança digital, aprender a distinguir comunicações fraudulentas e compreender o funcionamento dos juros e do crédito.";
+}
+}
+
+let consequences=`
+
+📊 RESUMO FINAL:
+⏱ Tempo total: ${time}s
+💰 Saldo final: ${money}€
+⭐ Pontuação final: ${score}
+📈 Total ganhos: ${totalGains}€
+📉 Total perdas: ${totalLosses}€
+💸 Juros pagos: ${interestPaid}€
+${loanActive ? "🏦 Empréstimo utilizado" : "✅ Sem empréstimos"}`;
+
+let result=`${group} | ${turma}
+👥 ${student1}${student2 ? " | "+student2 : ""}${student3 ? " | "+student3 : ""}
+${profile}
+
+🧠 Interpretação Pedagógica:
+${interpretation}
+
+📌 Recomendações de Melhoria:
+${recommendations}
+
+🌐 Para aprofundar conhecimentos, recomenda-se a consulta do sítio oficial do Plano Nacional de Formação Financeira "Todos Contam": https://www.todoscontam.pt/
+
+🎓 Consultem igualmente os recursos disponibilizados na disciplina "Todos Contam" na plataforma Aprender AEML:
+https://aprender-aemlaranjeira.pt/
+
+📚 Enquadramento nas Aprendizagens Essenciais (Cidadania e Desenvolvimento / Literacia Financeira):
+• Compreender diferentes meios de pagamento e os respetivos riscos.
+• Identificar situações de fraude e adotar comportamentos preventivos.
+• Gerir orçamento, crédito e juros de forma responsável.
+• Desenvolver pensamento crítico na utilização de serviços financeiros digitais.
+• Promover comportamentos seguros no ambiente digital e financeiro.
+${consequences}`;
+
 document.getElementById("result").innerText=result;
 
-await addDoc(collection(db,"ranking"),{group,turma,score,money,time});
+await addDoc(collection(db,"ranking"),{
+    group,
+    turma,
+    student1,
+    student2,
+    student3,
+    score,
+    money,
+    time,
+    profile
+});
 
 const q=query(collection(db,"ranking"),orderBy("score","desc"),limit(5));
 const snapshot=await getDocs(q);
@@ -179,6 +582,318 @@ let d=doc.data();
 html+=`<p>${d.group} - ⭐${d.score} 💰${d.money}€</p>`;
 });
 document.getElementById("leader").innerHTML=html;
+
+// 📊 GRÁFICO EVOLUÇÃO SALDO
+const ctx=document.getElementById('moneyChart');
+const chartInstance = new Chart(ctx,{
+ type:'line',
+ data:{
+   labels:balanceHistory.map((_,i)=>"Decisão "+i),
+   datasets:[
+     {
+       label:'Evolução do Saldo (€)',
+       data:balanceHistory,
+       tension:0.3,
+       fill:true,
+       segment: {
+         borderColor: ctx => ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0 ? 'red' : 'rgb(0, 200, 255)',
+         backgroundColor: ctx => ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0 ? 'rgba(255,0,0,0.2)' : 'rgba(0,200,255,0.2)'
+       }
+     },
+     {
+       label:'💸 Juros acumulados (€)',
+       data:interestHistory,
+       borderColor:'orange',
+       backgroundColor:'rgba(255,165,0,0.2)',
+       tension:0.3,
+       fill:false,
+       borderDash:[5,5]
+     },
+     {
+       type:'scatter',
+       label:'🏦 Empréstimo',
+       data: balanceHistory.map((value,index)=> index===loanIndex ? value : null),
+       pointBackgroundColor:'gold',
+       pointBorderColor:'black',
+       pointRadius:8,
+       showLine:false
+     },
+     {
+       type:'scatter',
+       label:'💥 Falência',
+       data: balanceHistory.map((value,index)=> index===bankruptcyIndex ? value : null),
+       pointBackgroundColor:'red',
+       pointBorderColor:'black',
+       pointRadius:10,
+       pointStyle:'rectRot',
+       showLine:false
+     }
+   ]
+ },
+ options:{
+   animation:{
+     duration:2000,
+     easing:'easeOutQuart',
+     delay:(context)=>{
+       if(context.type==='data' && context.mode==='default'){
+         return context.dataIndex * 150;
+       }
+       return 0;
+     }
+   },
+   plugins:{legend:{labels:{color:'black'}}},
+   scales:{
+     x:{ticks:{color:'black'}},
+     y:{
+        ticks:{color:'black'},
+        grid:{color: ctx => ctx.tick.value < 0 ? 'rgba(255,0,0,0.3)' : 'rgba(0,0,0,0.1)'}
+     }
+   }
+ }
+});
+
+// 🖼️ DOWNLOAD DA IMAGEM DO GRÁFICO
+document.getElementById("downloadChartBtn").onclick = function(){
+    const link = document.createElement("a");
+    link.href = chartInstance.toBase64Image();
+    link.download = `${group}_${turma}_Grafico_Evolucao_Saldo.png`;
+    link.click();
+};
+
+// 📄 GERAR PDF DO GRUPO
+const { jsPDF } = window.jspdf;
+document.getElementById("pdfBtn").onclick = function(){
+    const pdf = new jsPDF();
+    pdf.setFontSize(14);
+    pdf.text("Relatório do Grupo - Simulador Financeiro", 20, 20);
+    pdf.setFontSize(11);
+    pdf.text(result, 20, 35, {maxWidth:170});
+
+    const chartCanvas = document.getElementById("moneyChart");
+    const chartImage = chartCanvas.toDataURL("image/png",1.0);
+    pdf.addImage(chartImage, 'PNG', 15, 110, 180, 80);
+
+    pdf.save(`${group}_${turma}_Relatorio_Grupo.pdf`);
+};
+
+// 📊 GERAR RELATÓRIO DO PROFESSOR (VERSÃO ANALÍTICA)
+// 🔐 CONTROLO ÁREA PROFESSOR
+document.getElementById("teacherAreaBtn").onclick=function(){
+ document.getElementById("teacherLogin").classList.toggle("hidden");
+};
+
+document.getElementById("loginTeacherBtn").onclick = async function(){
+ const email=document.getElementById("teacherEmail").value;
+ const pass=document.getElementById("teacherPass").value;
+ try{
+   await signInWithEmailAndPassword(auth,email,pass);
+   document.getElementById("loginMsg").innerText="Login efetuado com sucesso.";
+ }catch(e){
+   document.getElementById("loginMsg").innerText="Erro no login: "+e.message;
+ }
+};
+
+// Criar conta professor
+document.getElementById("registerTeacherBtn").onclick = async function(){
+ const email=document.getElementById("teacherEmail").value;
+ const pass=document.getElementById("teacherPass").value;
+ try{
+   await createUserWithEmailAndPassword(auth,email,pass);
+   document.getElementById("loginMsg").innerText="Conta criada com sucesso.";
+ }catch(e){
+   document.getElementById("loginMsg").innerText="Erro ao criar conta: "+e.message;
+ }
+};
+
+// Monitorizar estado de autenticação
+onAuthStateChanged(auth, async (user)=>{
+ if(user){
+   isTeacher=true;
+   document.getElementById("teacherArea").classList.remove("hidden");
+   document.getElementById("teacherLogin").classList.add("hidden");
+
+   // 🔎 Ir buscar perfil do professor
+   const teacherDoc = await getDocs(query(collection(db,"teachers")));
+   let role="readOnly";
+   let allowedTurmas=[];
+
+   teacherDoc.forEach(doc=>{
+       if(doc.id===user.uid){
+           role = doc.data().role || "readOnly";
+           allowedTurmas = doc.data().turmas || [];
+       }
+   });
+
+   applyPermissions(role, allowedTurmas);
+
+ }else{
+   isTeacher=false;
+   document.getElementById("teacherArea").classList.add("hidden");
+ }
+});
+
+function applyPermissions(role, allowedTurmas){
+    const turmaAtual=document.getElementById("class").value;
+
+    // ADMIN – acesso total
+    if(role==="admin"){
+        document.getElementById("teacherPdfBtn").style.display="block";
+        document.getElementById("classReportBtn").style.display="block";
+        document.getElementById("exportExcelBtn").style.display="block";
+        return;
+    }
+
+    // PROFESSOR – apenas turmas atribuídas
+    if(role==="professor"){
+        document.getElementById("teacherPdfBtn").style.display="block";
+
+        if(allowedTurmas.includes(turmaAtual)){
+            document.getElementById("classReportBtn").style.display="block";
+        }else{
+            document.getElementById("classReportBtn").style.display="none";
+        }
+
+        document.getElementById("exportExcelBtn").style.display="none";
+        return;
+    }
+
+    // READ ONLY – apenas visualização
+    document.getElementById("teacherPdfBtn").style.display="block";
+    document.getElementById("classReportBtn").style.display="none";
+    document.getElementById("exportExcelBtn").style.display="none";
+}
+
+// Botão logout
+const logoutBtn=document.createElement("button");
+logoutBtn.innerText="Terminar Sessão";
+logoutBtn.onclick=()=>signOut(auth);
+document.getElementById("teacherArea").appendChild(logoutBtn);
+
+document.getElementById("teacherPdfBtn").onclick = function(){
+    const pdf = new jsPDF();
+    pdf.setFontSize(16);
+    pdf.text("Relatório Analítico do Professor", 20, 20);
+
+    pdf.setFontSize(11);
+    pdf.text(`Grupo: ${group}`, 20, 35);
+    pdf.text(`Turma: ${turma}`, 20, 42);
+    pdf.text(`Alunos: ${student1} ${student2 ? "| "+student2 : ""} ${student3 ? "| "+student3 : ""}`, 20, 49);
+
+    pdf.text("Indicadores Quantitativos:", 20, 60);
+    pdf.text(`Tempo total: ${time}s`, 25, 68);
+    pdf.text(`Pontuação: ${score}`, 25, 75);
+    pdf.text(`Saldo final: ${money}€`, 25, 82);
+    pdf.text(`Ganhos acumulados: ${totalGains}€`, 25, 89);
+    pdf.text(`Perdas acumuladas: ${totalLosses}€`, 25, 96);
+    pdf.text(`Juros pagos: ${interestPaid}€`, 25, 103);
+    pdf.text(`Empréstimo utilizado: ${loanActive ? "Sim" : "Não"}`, 25, 110);
+
+    pdf.text("Análise Pedagógica:", 20, 125);
+    pdf.text(profile, 25, 133);
+    pdf.text(interpretation, 25, 140, {maxWidth:160});
+
+    pdf.text("Recomendações:", 20, 165);
+    pdf.text(recommendations, 25, 173, {maxWidth:160});
+
+    const chartCanvas = document.getElementById("moneyChart");
+    const chartImage = chartCanvas.toDataURL("image/png",1.0);
+    pdf.addPage();
+    pdf.text("Gráfico da Evolução do Saldo", 20, 20);
+    pdf.addImage(chartImage, 'PNG', 15, 30, 180, 100);
+
+    pdf.save(`${group}_${turma}_Relatorio_Professor.pdf`);
+};
+
+// 🏫 RELATÓRIO AGREGADO POR TURMA
+document.getElementById("classReportBtn").onclick = async function(){
+    const turmaAtual = document.getElementById("class").value;
+    const qTurma = query(collection(db,"ranking"));
+    const snapshot = await getDocs(qTurma);
+
+    let totalGrupos=0;
+    let somaScores=0;
+    let somaSaldos=0;
+    let somaTempo=0;
+
+    snapshot.forEach(doc=>{
+        const d = doc.data();
+        if(d.turma === turmaAtual){
+            totalGrupos++;
+            somaScores += d.score;
+            somaSaldos += d.money;
+            somaTempo += d.time;
+        }
+    });
+
+    if(totalGrupos===0){
+        alert("Ainda não existem registos para esta turma.");
+        return;
+    }
+
+    const mediaScore = (somaScores/totalGrupos).toFixed(1);
+    const mediaSaldo = (somaSaldos/totalGrupos).toFixed(1);
+    const mediaTempo = (somaTempo/totalGrupos).toFixed(1);
+
+    const pdf = new jsPDF();
+    pdf.setFontSize(16);
+    pdf.text(`Relatório Agregado da Turma ${turmaAtual}`,20,20);
+
+    pdf.setFontSize(12);
+    pdf.text(`Número de grupos: ${totalGrupos}`,20,40);
+    pdf.text(`Média da pontuação: ${mediaScore}`,20,50);
+    pdf.text(`Média do saldo final: ${mediaSaldo}€`,20,60);
+    pdf.text(`Média do tempo: ${mediaTempo}s`,20,70);
+
+    pdf.text("
+Análise Global:",20,90);
+
+    let analiseGlobal="";
+
+    if(mediaSaldo > 800){
+        analiseGlobal="A turma demonstra, globalmente, comportamentos financeiros responsáveis e boa gestão do risco digital.";
+    }else if(mediaSaldo > 0){
+        analiseGlobal="A turma apresenta comportamentos mistos, sendo necessário reforçar a prevenção de fraude e a gestão de crédito.";
+    }else{
+        analiseGlobal="Os resultados indicam fragilidades significativas na gestão financeira e segurança digital, exigindo intervenção pedagógica direcionada.";
+    }
+
+    pdf.text(analiseGlobal,20,100,{maxWidth:170});
+
+    pdf.save(`Turma_${turmaAtual}_Relatorio_Agregado.pdf`);
+};
+
+// 📥 EXPORTAR TODOS OS RESULTADOS PARA EXCEL
+document.getElementById("exportExcelBtn").onclick = async function(){
+    const snapshot = await getDocs(collection(db,"ranking"));
+
+    let dados = [];
+
+    snapshot.forEach(doc=>{
+        const d = doc.data();
+        dados.push({
+            Grupo: d.group || "",
+            Turma: d.turma || "",
+            Aluno1: d.student1 || "",
+            Aluno2: d.student2 || "",
+            Aluno3: d.student3 || "",
+            Pontuacao: d.score || 0,
+            Saldo_Final: d.money || 0,
+            Tempo: d.time || 0,
+            Perfil: d.profile || ""
+        });
+    });
+
+    if(dados.length === 0){
+        alert("Ainda não existem registos para exportar.");
+        return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dados);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Resultados");
+
+    XLSX.writeFile(workbook, "Resultados_Simulador_Literacia_Financeira.xlsx");
+};
 
 emailjs.send("service_wi13tin","template_8hy77yw",{
  group:group,
