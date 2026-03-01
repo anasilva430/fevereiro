@@ -1,0 +1,93 @@
+
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Financeiro PREMIUM</title>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<style>
+body{margin:0;font-family:Arial;background:#0f2027;color:#fff}
+.app{max-width:420px;margin:auto;padding:10px}
+.card{background:#1c2833;padding:15px;border-radius:20px;margin-top:10px}
+button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;cursor:pointer}
+.hidden{display:none}
+.top{display:flex;justify-content:space-between;font-size:14px}
+.notification{background:#2c3e50;padding:10px;border-radius:10px;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="card" id="start">
+<h2>📱 Simulador PREMIUM</h2>
+<input id="group" placeholder="Grupo"><br><br>
+<input id="class" placeholder="Turma"><br><br>
+<button onclick="startGame()">Iniciar</button>
+</div>
+
+<div class="card hidden" id="game">
+<div class="top">
+<span>⭐ <span id="score">0</span></span>
+<span>💰 <span id="money">1000</span>€</span>
+<span>⏱ <span id="time">0</span>s</span>
+</div>
+<div id="notification" class="notification"></div>
+<h3 id="story"></h3>
+<div id="choices"></div>
+</div>
+
+<div class="card hidden" id="end">
+<h2>🏆 Ranking Global</h2>
+<p id="result"></p>
+<div id="leader"></div>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// 🔥 CONFIGURAÇÃO REAL DO TEU FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyCdZdChJiUb183kZFB2tNKCZSNfYtFWzrw",
+  authDomain: "segdig-11831.firebaseapp.com",
+  projectId: "segdig-11831",
+  storageBucket: "segdig-11831.firebasestorage.app",
+  messagingSenderId: "356326803992",
+  appId: "1:356326803992:web:5a19f95cd2d6dc4ba0916d",
+  measurementId: "G-M9G9QKMGQ2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+emailjs.init("d9d86G7bDE1WQ8eDy");
+
+let score=0,money=1000,startTime,timer,stepIndex=0;
+
+const steps=[
+{q:"Recebes SMS com link do banco.",c:["Clicar","Ignorar"],a:1,good:50,bad:-150},
+{q:"Site com preço demasiado baixo.",c:["Comprar","Evitar"],a:1,good:60,bad:-100},
+{q:"Pedido MBWay desconhecido.",c:["Aceitar","Recusar"],a:1,good:80,bad:-200},
+{q:"Guardar dados do cartão no navegador.",c:["Sim","Não"],a:1,good:50,bad:-80},
+{q:"Usar Wi‑Fi público para pagar.",c:["Sim","Não"],a:1,good:50,bad:-100}
+];
+
+window.startGame=function(){
+startTime=new Date();
+document.getElementById("start").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+
+timer=setInterval(()=>{
+document.getElementById("time").innerText=Math.floor((new Date()-startTime)/1000);
+},1000);
+
+nextStep();
+}
+
+function nextStep(){
+let s=steps[stepIndex];
+</html>
