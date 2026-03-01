@@ -24,7 +24,7 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 <h2>📱 Simulador PREMIUM</h2>
 <input id="group" placeholder="Grupo"><br><br>
 <input id="class" placeholder="Turma"><br><br>
-<button onclick="startGame()">Iniciar</button>
+<button id="startBtn">Iniciar</button>
 </div>
 
 <div class="card hidden" id="game">
@@ -76,7 +76,7 @@ const steps=[
 {q:"Usar Wi‑Fi público para pagar.",c:["Sim","Não"],a:1,good:50,bad:-100}
 ];
 
-window.startGame=function(){
+function startGame(){
 startTime=new Date();
 document.getElementById("start").classList.add("hidden");
 document.getElementById("game").classList.remove("hidden");
@@ -84,7 +84,7 @@ document.getElementById("game").classList.remove("hidden");
 timer=setInterval(()=>{
 document.getElementById("time").innerText=Math.floor((new Date()-startTime)/1000);
 },1000);
-
+document.getElementById("startBtn").addEventListener("click", startGame);
 nextStep();
 }
 
