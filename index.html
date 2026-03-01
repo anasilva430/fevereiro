@@ -6,7 +6,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simulador Financeiro PREMIUM</title>
+
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
 <style>
 body{margin:0;font-family:Arial;background:#0f2027;color:#fff}
 .app{max-width:420px;margin:auto;padding:10px}
@@ -14,10 +16,10 @@ body{margin:0;font-family:Arial;background:#0f2027;color:#fff}
 button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;cursor:pointer}
 .hidden{display:none}
 .top{display:flex;justify-content:space-between;font-size:14px}
-.notification{background:#2c3e50;padding:10px;border-radius:10px;margin:10px 0}
 </style>
 </head>
 <body>
+
 <div class="app">
 
 <div class="card" id="start">
@@ -33,7 +35,6 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 <span>💰 <span id="money">1000</span>€</span>
 <span>⏱ <span id="time">0</span>s</span>
 </div>
-<div id="notification" class="notification"></div>
 <h3 id="story"></h3>
 <div id="choices"></div>
 </div>
@@ -47,18 +48,19 @@ button{padding:12px;border:none;border-radius:12px;margin:5px 0;width:100%;curso
 </div>
 
 <script type="module">
+
+// 🔥 IMPORTS (TÊM DE ESTAR NO TOPO)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 🔥 CONFIGURAÇÃO REAL DO TEU FIREBASE
+// 🔥 FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCdZdChJiUb183kZFB2tNKCZSNfYtFWzrw",
   authDomain: "segdig-11831.firebaseapp.com",
   projectId: "segdig-11831",
   storageBucket: "segdig-11831.firebasestorage.app",
   messagingSenderId: "356326803992",
-  appId: "1:356326803992:web:5a19f95cd2d6dc4ba0916d",
-  measurementId: "G-M9G9QKMGQ2"
+  appId: "1:356326803992:web:5a19f95cd2d6dc4ba0916d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -66,15 +68,23 @@ const db = getFirestore(app);
 
 emailjs.init("d9d86G7bDE1WQ8eDy");
 
-let score=0,money=1000,startTime,timer,stepIndex=0;
+// 🎮 VARIÁVEIS
+let score=0;
+let money=1000;
+let startTime;
+let timer;
+let stepIndex=0;
 
 const steps=[
 {q:"Recebes SMS com link do banco.",c:["Clicar","Ignorar"],a:1,good:50,bad:-150},
 {q:"Site com preço demasiado baixo.",c:["Comprar","Evitar"],a:1,good:60,bad:-100},
 {q:"Pedido MBWay desconhecido.",c:["Aceitar","Recusar"],a:1,good:80,bad:-200},
 {q:"Guardar dados do cartão no navegador.",c:["Sim","Não"],a:1,good:50,bad:-80},
-{q:"Usar Wi‑Fi público para pagar.",c:["Sim","Não"],a:1,good:50,bad:-100}
+{q:"Usar Wi-Fi público para pagar.",c:["Sim","Não"],a:1,good:50,bad:-100}
 ];
+
+// 🔥 INICIAR JOGO
+document.getElementById("startBtn").addEventListener("click", startGame);
 
 function startGame(){
 startTime=new Date();
@@ -82,12 +92,87 @@ document.getElementById("start").classList.add("hidden");
 document.getElementById("game").classList.remove("hidden");
 
 timer=setInterval(()=>{
-document.getElementById("time").innerText=Math.floor((new Date()-startTime)/1000);
+document.getElementById("time").innerText=
+Math.floor((new Date()-startTime)/1000);
 },1000);
-document.getElementById("startBtn").addEventListener("click", startGame);
+
 nextStep();
 }
 
 function nextStep(){
 let s=steps[stepIndex];
+document.getElementById("story").innerText=s.q;
+
+let div=document.getElementById("choices");
+div.innerHTML="";
+
+s.c.forEach((opt,i)=>{
+let b=document.createElement("button");
+b.innerText=opt;
+b.onclick=()=>choose(i);
+div.appendChild(b);
+});
+}
+
+function choose(i){
+let s=steps[stepIndex];
+
+if(i===s.a){
+score++;
+money+=s.good;
+}else{
+money+=s.bad;
+}
+
+document.getElementById("score").innerText=score;
+document.getElementById("money").innerText=money;
+
+stepIndex++;
+
+if(stepIndex<steps.length){
+nextStep();
+}else{
+endGame();
+}
+}
+
+async function endGame(){
+clearInterval(timer);
+
+document.getElementById("game").classList.add("hidden");
+document.getElementById("end").classList.remove("hidden");
+
+let time=Math.floor((new Date()-startTime)/1000);
+let group=document.getElementById("group").value;
+let turma=document.getElementById("class").value;
+
+document.getElementById("result").innerText=
+`${group} | ${turma} | ⭐${score} | 💰${money}€ | ⏱${time}s`;
+
+// 🔥 GUARDAR NO FIRESTORE
+await addDoc(collection(db,"ranking"),{group,turma,score,money,time});
+
+// 🔥 LER TOP 5
+const q=query(collection(db,"ranking"),orderBy("score","desc"),limit(5));
+const snapshot=await getDocs(q);
+
+let html="";
+snapshot.forEach(doc=>{
+let d=doc.data();
+html+=`<p>${d.group} - ⭐${d.score} 💰${d.money}€</p>`;
+});
+document.getElementById("leader").innerHTML=html;
+
+// EMAIL
+emailjs.send("service_wi13tin","template_8hy77yw",{
+group:group,
+turma:turma,
+score:score,
+time:time
+});
+}
+
+</script>
+
+</body>
 </html>
